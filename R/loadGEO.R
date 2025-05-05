@@ -371,6 +371,9 @@ filterPhenoAnnotations <- function(es) {
             channel <- sub(pattern = "characteristics_([^.]+)(\\..+)?",replacement = "\\1",x =  names(old.pdata)[i])
             splitted <- strsplit(as.vector(old.pdata[[i]]), ':')
             lengths <- sapply(splitted, length)
+            if (all(lengths == 0)) {
+                next
+            }
             if (any(lengths != 2 & lengths != 0)) {
                 new.pdata[[labels[i]]] <- old.pdata[[i]]
             } else {
