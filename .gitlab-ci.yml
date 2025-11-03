@@ -1,0 +1,90 @@
+default:
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+
+variables:
+  DOCKER_TLS_CERTDIR: "/certs"
+
+
+stages: [test, build, push]
+
+r-tests:
+  stage: test
+  image: registry.gitlab.com/alserglab/pr/phantasus/phantasus-preimage:latest
+  services: []        # no DinD needed here
+  script:
+    # (optional) install rcmdcheck/devtools if they’re not already in the image
+    - R -q -e 'if (!requireNamespace("rcmdcheck", quietly=TRUE)) install.packages("rcmdcheck", repos="https://cloud.r-project.org")'
+    - R -q -e 'if (!requireNamespace("devtools", quietly=TRUE)) install.packages("devtools", repos="https://cloud.r-project.org")'
+
+    - R -q -e 'devtools::install_dev_deps()'
+
+    # Build + check the package from the repo GitLab just checked out
+    - R -q -e 'rcmdcheck::rcmdcheck(path = ".", args = c("--no-manual"), error_on = "warning")'
+
+    # todo: fix running JS tests
+    # - apt-get update && apt-get install -y --no-install-recommends nodejs npm firefox
+    # - ./inst/test_js.sh
+  rules:
+    - if: '$CI_COMMIT_BRANCH'   # run on all branches
+  interruptible: true
+
+# Build every commit. Tag with short SHA.
+docker-build:
+  stage: build
+  script:
+    - echo "Logging in to registry"
+    - echo "$CI_JOB_TOKEN" | docker login "$CI_REGISTRY" -u gitlab-ci-token --password-stdin
+    - IMAGE_TAG="$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA"
+    - FULL_IMAGE_TAG="$CI_REGISTRY_IMAGE:$IMAGE_TAG"
+    - echo "Building $IMAGE_TAG"
+    - |
+      docker build --pull \
+          --build-arg PREIMAGE_NAME="registry.gitlab.com/alserglab/pr/phantasus/phantasus-preimage" \
+          --build-arg TARGET_BRANCH="${CI_COMMIT_BRANCH}" \
+          --build-arg PHANTASUS_BUILD="${IMAGE_TAG}" \
+          -t "$FULL_IMAGE_TAG" .
+    - docker push "$FULL_IMAGE_TAG"
+  rules:
+    - if: '$CI_COMMIT_BRANCH'  # all branches
+  interruptible: true
+
+    #docker-test:
+    #  stage: test
+    #  needs: ["docker-build"]
+    #  script:
+    #    - echo "Logging in to registry"
+    #    - echo "$CI_JOB_TOKEN" | docker login "$CI_REGISTRY" -u gitlab-ci-token --password-stdin
+    #    - IMAGE_TAG="$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA"
+    #    - FULL_IMAGE_TAG="$CI_REGISTRY_IMAGE:$IMAGE_TAG"
+    #    - echo "Pulling $IMAGE_TAG"
+    #    - docker pull "$FULL_IMAGE_TAG"
+    #    - |
+    #      docker run --rm --entrypoint /bin/bash "$FULL_IMAGE_TAG" \
+    #          R -e 'rcmdcheck::rcmdcheck(path="/root/phantasus", args = c("--no-manual"), error_on = "warning")'
+    #  rules:
+    #    - if: '$CI_COMMIT_BRANCH'  # all branches
+    #  interruptible: true
+
+
+# Push stable tags for releases & the default branch
+docker-push-tags:
+  stage: push
+  needs: ["docker-build", "r-tests"]
+  script:
+    - docker login -u gitlab-ci-token -p "$CI_JOB_TOKEN" "$CI_REGISTRY"
+    - IMAGE_TAG="$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA"
+    # latest for default branch
+    - |
+      if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
+        docker pull "$CI_REGISTRY_IMAGE:${IMAGE_TAG}"
+        docker tag  "$CI_REGISTRY_IMAGE:${IMAGE_TAG}" "$CI_REGISTRY_IMAGE:latest"
+        docker push "$CI_REGISTRY_IMAGE:latest"
+        DATE_TAG="$CI_COMMIT_BRANCH:$(date +%Y%m%d)"
+        docker tag  "$CI_REGISTRY_IMAGE:${IMAGE_TAG}" "$CI_REGISTRY_IMAGE:$DATE_TAG"
+        docker push "$CI_REGISTRY_IMAGE:$DATE_TAG"
+      fi
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+  interruptible: true

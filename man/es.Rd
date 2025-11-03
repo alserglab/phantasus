@@ -8,7 +8,7 @@
 An object of class \code{ExpressionSet} with 20 rows and 5 columns.
 }
 \usage{
-data(es)
+es
 }
 \description{
 Small slice from GSE27112-GPL6103 for
