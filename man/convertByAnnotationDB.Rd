@@ -32,9 +32,4 @@ JSON object with a vector of converted IDs
 \description{
 \code{convertByAnnotationDB} function returns \code{keyType} ids from \code{dbName} mapped to \code{columnName} in \code{es}.
 }
-\examples{
-\dontrun{
-}
-
-}
 \keyword{internal}

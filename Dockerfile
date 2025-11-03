@@ -15,6 +15,8 @@ ENV R_USER_CONFIG_DIR=/etc
 
 COPY . /root/phantasus
 
+RUN ls -l /root/phantasus
+
 RUN R -e 'devtools::install_local("/root/phantasus", dependencies=TRUE, upgrade=FALSE, build_vignettes=TRUE); remove.packages("BH")'
 
 
@@ -31,6 +33,7 @@ RUN cp -r /root/phantasus/inst/configs/apache2  /etc/
 RUN cp /root/phantasus/inst/configs/index.html /var/www/html/
 RUN cp -f /root/phantasus/inst/docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
 
+RUN ls -l /root/phantasus
 
 RUN a2dissite default-ssl.conf
 RUN a2dissite 000-default.conf
@@ -54,7 +57,11 @@ RUN mkdir -p /var/phantasus/preloaded && chown ${OCPU_USER} /var/phantasus/prelo
 RUN mkdir -p /var/phantasus/ocpu-root && chown -R ${OCPU_USER} /var/phantasus/ocpu-root
 RUN mkdir -p /var/cache/nginx && chown -R ${OCPU_USER} /var/cache/nginx
 
+RUN ls -l /root/phantasus
+
 RUN rm -rf /root/phantasus/inst
+
+RUN ls -l /root/phantasus
 
 RUN rm /var/log/apache2/access.log /var/log/apache2/error.log /var/log/opencpu/apache_access.log /var/log/opencpu/apache_error.log
 

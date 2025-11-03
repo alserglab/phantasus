@@ -5,8 +5,6 @@
 #'
 #' @docType data
 #'
-#' @usage data(es)
-#'
 #' @examples
 #' \dontrun{
 #' data(es)
