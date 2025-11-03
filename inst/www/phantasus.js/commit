@@ -1,10 +1,5 @@
-commit 9be33914a300605613661b2625e1e788d8af61e7
-Merge: e51698c 1f42527
-Author: Maksim Kleverov <klevermx@gmail.com>
-Date:   Fri Feb 7 20:23:02 2025 +0000
+commit 29482812ccd2aa601fa1a1bcdec18684aa14291c
+Author: Alexey Sergushichev <alsergbox@gmail.com>
+Date:   Mon Nov 3 14:07:00 2025 -0600
 
-    Merge branch 'gct_writter_fix' into 'master'
-    
-    use vector index, not index inside vector
-    
-    See merge request alserglab/pr/phantasus/phantasus.js!1
+    always use checkGPLs provided GSE ids

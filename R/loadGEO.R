@@ -768,7 +768,7 @@ checkGPLs <- function(name) {
   GEO <- spl[1]
   if (length(spl) == 2) {
     gpls <- jsonlite::fromJSON(checkGPLs(spl[1]))
-    gpls <- intersect(gpls, name)
+    gpls <- intersect(gpls, c(name, spl[1]))
     return(jsonlite::toJSON(gpls))
   }
 

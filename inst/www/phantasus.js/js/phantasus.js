@@ -13291,16 +13291,12 @@ phantasus.LandingPage.prototype = {
           _this.show();
           throw new Error("Dataset" + " " + options.dataset.file + " does not exist");
         }
-        if (filenames.length === 1) {
-          new phantasus.HeatMap(options);
-        }
-        else {
-          for (var j = 0; j < filenames.length; j++) {
+
+        for (var j = 0; j < filenames.length; j++) {
             var specificOptions = options;
             specificOptions.dataset.file = filenames[j];
 
             new phantasus.HeatMap(specificOptions);
-          }
         }
       });
       req.fail(function () {

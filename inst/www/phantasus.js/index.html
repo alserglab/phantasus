@@ -27,9 +27,11 @@
 
 <script type="text/javascript">
   console.log(PHANTASUS_VERSION,'-',PHANTASUS_BUILD);
-  loc = window.location.pathname;
-  loc = loc.substr(0, loc.lastIndexOf("/") + 1);
-  window.libraryPrefix = loc;
+  if (!window.libraryPrefix) {
+      loc = window.location.pathname;
+      loc = loc.substr(0, loc.lastIndexOf("/") + 1);
+      window.libraryPrefix = loc;
+  }
 
   phantasus.Util.setLibrary('phantasus');
   phantasus.Util.loadTrackingCode();

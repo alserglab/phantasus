@@ -160,3 +160,9 @@ test_that("filterPhenoAnnotations parses characteristics", {
     new_values <- pData(es)$gender[-empty_strings]
     expect_true(all(old_values == paste0("gender: ", new_values)))
 })
+
+
+test_that("checkGPLs returns valid GSE for GSE-GPL when there is only one GPL", {
+    expect_equal(fromJSON(checkGPLs("GSE14308-GPL1261")), c("GSE14308"))
+
+})
