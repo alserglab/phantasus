@@ -81,7 +81,7 @@ docker-push-tags:
         docker pull "$CI_REGISTRY_IMAGE:${IMAGE_TAG}"
         docker tag  "$CI_REGISTRY_IMAGE:${IMAGE_TAG}" "$CI_REGISTRY_IMAGE:latest"
         docker push "$CI_REGISTRY_IMAGE:latest"
-        DATE_TAG="$CI_COMMIT_BRANCH:$(date +%Y%m%d)"
+        DATE_TAG="$CI_COMMIT_BRANCH-$(date +%Y%m%d)"
         docker tag  "$CI_REGISTRY_IMAGE:${IMAGE_TAG}" "$CI_REGISTRY_IMAGE:$DATE_TAG"
         docker push "$CI_REGISTRY_IMAGE:$DATE_TAG"
       fi
