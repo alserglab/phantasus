@@ -1,5 +1,5 @@
-commit 29482812ccd2aa601fa1a1bcdec18684aa14291c
+commit 0e9cf99cf79cf9bfefda8c4fc7ea289bef292f98
 Author: Alexey Sergushichev <alsergbox@gmail.com>
-Date:   Mon Nov 3 14:07:00 2025 -0600
+Date:   Tue Nov 4 10:01:05 2025 -0600
 
-    always use checkGPLs provided GSE ids
+    fix running tests

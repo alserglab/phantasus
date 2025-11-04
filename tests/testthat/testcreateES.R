@@ -9,3 +9,13 @@ test_that("createES finishes with result", {
                      varLabels = varLabels(es),
                      fvarLabels = fvarLabels(es)), "ExpressionSet")
 })
+
+test_that("createES works with empty metadata", {
+    expect_is(createES(data = matrix(1:4, nrow=2),
+                       pData = list(),
+                       fData = list(),
+                       eData = list(name="", lab="", contact="", title="", url="", other=list(), pubMedIds=""),
+                       varLabels = NULL,
+                       fvarLabels = NULL),
+              "ExpressionSet")
+})

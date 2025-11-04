@@ -16,16 +16,31 @@ r-tests:
   script:
     # (optional) install rcmdcheck/devtools if they’re not already in the image
     - R -q -e 'if (!requireNamespace("rcmdcheck", quietly=TRUE)) install.packages("rcmdcheck", repos="https://cloud.r-project.org")'
-    - R -q -e 'if (!requireNamespace("devtools", quietly=TRUE)) install.packages("devtools", repos="https://cloud.r-project.org")'
 
     - R -q -e 'devtools::install_dev_deps()'
 
     # Build + check the package from the repo GitLab just checked out
     - R -q -e 'rcmdcheck::rcmdcheck(path = ".", args = c("--no-manual"), error_on = "warning")'
+  rules:
+    - if: '$CI_COMMIT_BRANCH'   # run on all branches
+  interruptible: true
 
-    # todo: fix running JS tests
-    # - apt-get update && apt-get install -y --no-install-recommends nodejs npm firefox
-    # - ./inst/test_js.sh
+js-tests:
+  stage: test
+  image: registry.gitlab.com/alserglab/pr/phantasus/phantasus-preimage:latest
+  services: []        # no DinD needed here
+  script:
+    - R -q -e 'devtools::install_dev_deps()'
+
+    - add-apt-repository -y ppa:mozillateam/ppa
+    - |
+      cat <<'EOF' >/etc/apt/preferences.d/mozillateam-firefox
+      Package: firefox
+      Pin: release o=LP-PPA-mozillateam
+      Pin-Priority: 1001
+      EOF
+    - apt-get update && apt-get install -y --no-install-recommends nodejs npm firefox
+    - ./inst/test_js.sh
   rules:
     - if: '$CI_COMMIT_BRANCH'   # run on all branches
   interruptible: true
@@ -50,28 +65,10 @@ docker-build:
     - if: '$CI_COMMIT_BRANCH'  # all branches
   interruptible: true
 
-    #docker-test:
-    #  stage: test
-    #  needs: ["docker-build"]
-    #  script:
-    #    - echo "Logging in to registry"
-    #    - echo "$CI_JOB_TOKEN" | docker login "$CI_REGISTRY" -u gitlab-ci-token --password-stdin
-    #    - IMAGE_TAG="$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA"
-    #    - FULL_IMAGE_TAG="$CI_REGISTRY_IMAGE:$IMAGE_TAG"
-    #    - echo "Pulling $IMAGE_TAG"
-    #    - docker pull "$FULL_IMAGE_TAG"
-    #    - |
-    #      docker run --rm --entrypoint /bin/bash "$FULL_IMAGE_TAG" \
-    #          R -e 'rcmdcheck::rcmdcheck(path="/root/phantasus", args = c("--no-manual"), error_on = "warning")'
-    #  rules:
-    #    - if: '$CI_COMMIT_BRANCH'  # all branches
-    #  interruptible: true
-
-
 # Push stable tags for releases & the default branch
 docker-push-tags:
   stage: push
-  needs: ["docker-build", "r-tests"]
+  needs: ["docker-build", "r-tests", "js-tests"]
   script:
     - docker login -u gitlab-ci-token -p "$CI_JOB_TOKEN" "$CI_REGISTRY"
     - IMAGE_TAG="$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA"

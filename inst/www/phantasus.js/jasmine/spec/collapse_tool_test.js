@@ -16,7 +16,8 @@ describe('collapse_tool_test', function () {
         input: {
           collapse_method: 'Maximum Mean Probe',
           collapse: 'Rows',
-          collapse_to_fields: ['id']
+          collapse_to_fields: ['id'],
+          omit_unannotated: false
         }
       });
       expect(newHeatMap.getProject().getFullDataset())
@@ -25,6 +26,9 @@ describe('collapse_tool_test', function () {
           rows: 2,
           columns: 2
         }), 0.00001);
+      return newHeatMap.heatmap.dataset.esSession.then(function() {
+          expect(newHeatMap.heatmap.dataset.esSession).toBeDefined();
+      });
     });
   it('maxmedianprobe',
     function () {
@@ -43,7 +47,8 @@ describe('collapse_tool_test', function () {
         input: {
           collapse_method: 'Maximum Median Probe',
           collapse: 'Rows',
-          collapse_to_fields: ['id']
+          collapse_to_fields: ['id'],
+          omit_unannotated: false
         }
       });
       expect(newHeatMap.getProject().getFullDataset())
@@ -52,6 +57,9 @@ describe('collapse_tool_test', function () {
           rows: 2,
           columns: 2
         }), 0.00001);
+      return newHeatMap.heatmap.dataset.esSession.then(function() {
+          expect(newHeatMap.heatmap.dataset.esSession).toBeDefined();
+      });
     });
   it('mean',
     function () {
@@ -71,7 +79,8 @@ describe('collapse_tool_test', function () {
         input: {
           collapse_method: 'Mean',
           collapse: 'Rows',
-          collapse_to_fields: ['id']
+          collapse_to_fields: ['id'],
+          omit_unannotated: false
         }
       });
       expect(newHeatMap.getProject().getFullDataset())
@@ -80,6 +89,9 @@ describe('collapse_tool_test', function () {
         rows: 2,
         columns: 2
       }), 0.00001);
+      return newHeatMap.heatmap.dataset.esSession.then(function() {
+          expect(newHeatMap.heatmap.dataset.esSession).toBeDefined();
+      });
 
     });
 });
