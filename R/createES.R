@@ -32,9 +32,15 @@
 #' }
 #' @keywords internal
 createES <- function(data, pData, varLabels, fData, fvarLabels, eData) {
+    if (length(pData) == 0) {
+        pData <- matrix(, nrow=ncol(data), ncol=0)
+    }
     phenoData <- AnnotatedDataFrame(data.frame(pData, stringsAsFactors = FALSE))
     varLabels(phenoData) <- varLabels
 
+    if (length(fData) == 0) {
+        fData <- matrix(, nrow=nrow(data), ncol=0)
+    }
     featureData <- AnnotatedDataFrame(data.frame(fData, stringsAsFactors = FALSE))
     varLabels(featureData) <- fvarLabels
 
@@ -51,6 +57,7 @@ createES <- function(data, pData, varLabels, fData, fvarLabels, eData) {
                         phenoData = phenoData,
                         featureData = featureData,
                         experimentData = ed)
+
     assign("es", es, envir = parent.frame())
     es
 }

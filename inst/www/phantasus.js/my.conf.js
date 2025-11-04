@@ -7,9 +7,11 @@ module.exports = function(config) {
     // base path that will be used to resolve all patterns (eg. files, exclude)
     basePath: '',
 
+    hostname: '127.0.0.1',
+    // optional, but can help in some setups:
+    listenAddress: '127.0.0.1',
 
-
-    // frameworks to use
+// frameworks to use
     // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
     frameworks: ['jasmine'],
 
@@ -27,15 +29,18 @@ module.exports = function(config) {
       './js/phantasus-external-pdfkit-xlsx.min.js',
       './js/phantasus-external-plotly-echarts.min.js',
       './js/phantasus.js',
+      './jasmine/spec/log-spec-name.js',
+      './jasmine/spec/fail-on-exception.js',
       './jasmine/matchers/*.js',
       './jasmine/run_ocpu.js',
-      './jasmine/spec/*[tT]est.js'
+      './jasmine/spec/*[tT]est.js',
+      './jasmine/spec/global-sleep.js'
     ],
 
     proxies: {
-      '/jasmine/test_files/': 'http://localhost:9876/base/jasmine/test_files/',
-      '/message.proto': 'http://localhost:9876/base/message.proto',
-      '/test_files/': 'http://localhost:9876/base/jasmine/test_files/'
+      '/jasmine/test_files/': '/base/jasmine/test_files/',
+      '/message.proto': '/base/message.proto',
+      '/test_files/': '/base/jasmine/test_files/'
     },
 
 
