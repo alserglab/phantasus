@@ -13,7 +13,7 @@ Main features:
 * Gene set enrichment analysis via `fgsea` package.
 * Sharing session links.
 
-<img src="https://ctlab.github.io/phantasus-doc/images/screenshot.png" width="600px" />
+<img src="https://alserglab.github.io/phantasus-doc/images/screenshot.png" width="600px" />
 
 ## Quick start
 
@@ -54,11 +54,11 @@ and open it in the default browser:
 servePhantasus()
 ```
 
-Please refer to the [documentation](https://ctlab.github.io/phantasus-doc/installation.html#using-docker) for comprehensive installation and configuration instructions. 
+Please refer to the [documentation](https://alserglab.github.io/phantasus-doc/installation.html#using-docker) for comprehensive installation and configuration instructions. 
 
 ## Links:
 * Official mirror: <https://alserglab.wustl.edu/phantasus>.
-* Documentation: <https://ctlab.github.io/phantasus-doc>.
+* Documentation: <https://alserglab.github.io/phantasus-doc>.
 * Bioconductor package: <https://bioconductor.org/packages/phantasus>.
 * Docker image: <https://hub.docker.com/r/alserglab/phantasus>.
 
