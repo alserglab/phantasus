@@ -344,7 +344,69 @@ filterFeatureAnnotations <- function(es) {
 
     es
 }
-#' @importFrom tidyr spread
+
+#' Parse characteristics columns somewhat intelligently
+#'
+#' @param pdata AnnotatedDataFrame with characteristics columns
+#' @returns named data.frame with parsed annotations, rows are in the same order as the input
+#' @keywords internal
+parseCharacteristics <- function(pdata) {
+    old.pdata <- pData(pdata)
+    labels <- varLabels(pdata)
+
+    new.pdata <- data.table(sample=rownames(old.pdata))
+
+
+    sample_key_value <- rbindlist(lapply(seq_len(ncol(old.pdata)), function(i) {
+        channel <- sub(pattern = "characteristics_([^.]+)(\\..+)?",
+                       replacement = "\\1",
+                       x = names(old.pdata)[i])
+        splitted <- strsplit(as.vector(old.pdata[[i]]), ':')
+        lengths <- sapply(splitted, length)
+        if (all(lengths == 0)) {
+            # empty
+            next
+        }
+
+        if (any(lengths != 2 & lengths != 0)) {
+            # characteristic is not in the form of key:value pair (or empty), keeping as is
+            new.pdata[[labels[i]]] <- old.pdata[[i]]
+            next
+        }
+
+        zeros <- lengths == 0
+        keys <- trimws(sapply(splitted[!zeros], `[`, 1))
+        values <- trimws(sapply(splitted[!zeros], `[`, 2))
+        samples <- rownames(old.pdata)[!zeros]
+        # "key" is a formal argument to `data.table()`, so doing via intermediate list
+        as.data.table(list(sample = samples, key = keys, value = values, channel = channel))
+    }))
+
+    if (length(unique(sample_key_value$channel)) > 1){
+        sample_key_value[, key := paste0(key, "_", channel)]
+
+    }
+    sample_key_value[, channel := NULL]
+
+    if (nrow(sample_key_value) > 0) {
+        characteristics_table <- dcast(sample_key_value,
+                                       fun.aggregate = function(v) paste(sort(v), collapse=" /// "),
+                                       sample ~ key,
+                                       value.var = "value",
+                                       fill=NA)
+
+        new.pdata <- merge(new.pdata, characteristics_table, by="sample", all.x=TRUE)
+
+        new.pdata <- new.pdata[match(rownames(old.pdata), sample), ]
+        stopifnot(identical(new.pdata$sample, rownames(old.pdata)))
+    }
+
+    res <- as.data.frame(new.pdata)
+    rownames(res) <- new.pdata$sample
+    res$sample <- NULL
+    res
+}
+
 filterPhenoAnnotations <- function(es) {
     phenoData(es) <- phenoData(es)[,
                                    grepl("characteristics",
@@ -359,49 +421,11 @@ filterPhenoAnnotations <- function(es) {
                                varLabels(es),
                                ignore.case = TRUE)]
 
-    parsePData <- function(old.phenodata) {
-        old.pdata <- pData(old.phenodata)
-        labels <- varLabels(old.phenodata)
 
-        new.pdata <- as.data.frame(matrix(NA, nrow = nrow(old.pdata), ncol = 0))
-        rownames(new.pdata) <- rownames(old.pdata)
-        sample_key_value = as.data.table(matrix(NA, nrow = 0, ncol =4))
-        colnames(sample_key_value) <-c("sample","key","value", "channel")
-        for (i in seq_len(ncol(old.pdata))) {
-            channel <- sub(pattern = "characteristics_([^.]+)(\\..+)?",replacement = "\\1",x =  names(old.pdata)[i])
-            splitted <- strsplit(as.vector(old.pdata[[i]]), ':')
-            lengths <- sapply(splitted, length)
-            if (all(lengths == 0)) {
-                next
-            }
-            if (any(lengths != 2 & lengths != 0)) {
-                new.pdata[[labels[i]]] <- old.pdata[[i]]
-            } else {
-                zeros <- lengths == 0
-                keys <- trimws(take(splitted[!zeros], 1))
-                values <- trimws(take(splitted[!zeros], 2))
-                samples <- rownames(old.pdata)[!zeros]
-                sample_key_value <- rbind(sample_key_value, data.frame(sample = samples, key = keys, value = values, channel = channel))
-            }
-        }
-        if (length(unique(sample_key_value$channel)) >1){
-            sample_key_value$key <- paste(sample_key_value$key, sample_key_value$channel, sep = "_")
-
-        }
-        sample_key_value$channel <- NULL
-        chr_df <- spread(unique(sample_key_value), key, value, fill= NA)
-        rownames(chr_df) <- chr_df$sample
-        chr_df$sample <- NULL
-        if (nrow(chr_df)>0) {
-            new.pdata <- cbind(new.pdata, chr_df)
-        }
-        new.pdata
-    }
-
-    if (ncol(es) > 0 && length(chr)>0) {
-        new.pdata <-  parsePData(phenoData(es)[, chr])
-        pData(es)[, chr] <-NULL
-        pData(es)[,colnames(new.pdata)] <- new.pdata
+    if (ncol(es) > 0 && length(chr) > 0) {
+        new.pdata <-  parseCharacteristics(phenoData(es)[, chr])
+        pData(es)[, chr] <- NULL
+        pData(es)[, colnames(new.pdata)] <- new.pdata
     }
 
     es

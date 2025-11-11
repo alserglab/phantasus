@@ -166,3 +166,20 @@ test_that("checkGPLs returns valid GSE for GSE-GPL when there is only one GPL", 
     expect_equal(fromJSON(checkGPLs("GSE14308-GPL1261")), c("GSE14308"))
 
 })
+
+test_that("weird sample annotations are parse correctly", {
+    # multiple entries for "treatment" annotation for the same sample
+    es <- getGEO("GSE180475", getGPL = FALSE, AnnotGPL = FALSE)[[1]]
+    es1 <- filterPhenoAnnotations(es)
+    expect_equal(es1$treatment[1], "KD GFP /// shGFP")
+
+    # empty entries? gitlab issue #83
+    es <- getGEO("GSE153557", getGPL = FALSE, AnnotGPL = FALSE)[[1]]
+    es1 <- filterPhenoAnnotations(es)
+    expect_true(!is.null(es1))
+
+    # empty entries? gitlab issue #83
+    es <- getGEO("GSE78913", getGPL = FALSE, AnnotGPL = FALSE)[[2]]
+    es1 <- filterPhenoAnnotations(es)
+    expect_true(!is.null(es1))
+})
