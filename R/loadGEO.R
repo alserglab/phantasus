@@ -365,13 +365,13 @@ parseCharacteristics <- function(pdata) {
         lengths <- sapply(splitted, length)
         if (all(lengths == 0)) {
             # empty
-            next
+            return(NULL)
         }
 
         if (any(lengths != 2 & lengths != 0)) {
             # characteristic is not in the form of key:value pair (or empty), keeping as is
             new.pdata[[labels[i]]] <- old.pdata[[i]]
-            next
+            return(NULL)
         }
 
         zeros <- lengths == 0
@@ -386,7 +386,6 @@ parseCharacteristics <- function(pdata) {
         sample_key_value[, key := paste0(key, "_", channel)]
 
     }
-    sample_key_value[, channel := NULL]
 
     if (nrow(sample_key_value) > 0) {
         characteristics_table <- dcast(sample_key_value,
