@@ -1,10 +1,14 @@
 #!/bin/bash
 
+RSCRIPT_PID=""
+
 _term() {
   trap ERR
   echo "Caught signal!"
   nginx -s stop
-  apachectl -k graceful-stop
+  if [ -n "$RSCRIPT_PID" ]; then
+    kill -2 "$RSCRIPT_PID" 2>/dev/null || true  # SIGINT → R calls q() → CleanupParallel kills children
+  fi
 }
 
 _term_config(){
@@ -12,24 +16,10 @@ _term_config(){
     exit 1
 }
 
-trap _term SIGINT SIGTERM SIGWINCH
+trap _term SIGINT SIGTERM
 
 trap _term_config ERR
 set -eE
-
-
-
-
-# fixes permission error on old docker versions (workaround from https://github.com/moby/moby/issues/6047#issuecomment-68608697)
-mv /var/log/apache2 /var/log/apache2.bak && mv /var/log/apache2.bak /var/log/apache2
-
-chown -R $OCPU_USER /var/log/apache2
-chown -R $OCPU_USER /var/run/apache2
-chown -R $OCPU_USER /var/log/opencpu
-chown -R $OCPU_USER /var/phantasus/ocpu-root
-
-mkdir -p /run/apache2
-chown $OCPU_USER /run/apache2
 
 chown -R $OCPU_USER /var/log/nginx
 chown -R $OCPU_USER /var/lib/nginx
@@ -43,9 +33,36 @@ chown $OCPU_USER /run/nginx.pid
 
 gosu $OCPU_USER R -e "phantasus:::createDockerConf(); phantasus::setupPhantasus()" #|| _term_config
 
+# Generate nginx upstream block from internal_ports in user config.
+# Falls back to ports 8001-8010 if the key is absent.
+UPSTREAM_PORTS=$(gosu $OCPU_USER Rscript --vanilla -e "
+  tryCatch({
+    ports <- unlist(phantasus::getPhantasusConf('internal_ports'))
+    if (is.null(ports) || length(ports) == 0) stop('internal_ports not configured')
+    cat(paste(ports, collapse=' '), '\n')
+  }, error = function(e) {
+    cat('8001 8002 8003 8004 8005 8006 8007 8008 8009 8010\n')
+  })
+" 2>/dev/null)
+
+{
+  echo "upstream phantasus_backend {"
+  echo "    least_conn;"
+  for p in $UPSTREAM_PORTS; do
+    echo "    server localhost:$p;"
+  done
+  echo "}"
+} > /etc/nginx/conf.d/upstream.conf
+
 gosu $OCPU_USER nginx
 
-gosu $OCPU_USER apachectl start
+gosu $OCPU_USER Rscript -e "
+  ports <- unlist(phantasus::getPhantasusConf('internal_ports'))
+  message('Starting ', length(ports), ' R server instances on ports ',
+          paste(ports, collapse=', '))
+  phantasus::servePhantasus(port = ports, openInBrowser = FALSE)
+" &
+RSCRIPT_PID=$!
 
 
 color() {
@@ -100,4 +117,4 @@ printf $blue "----"
 printf "\e[0m%s\n" ""
 
 
-tail -f /var/log/nginx/access.log
+wait $RSCRIPT_PID

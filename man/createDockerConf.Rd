@@ -2,23 +2,22 @@
 % Please edit documentation in R/appConfig.R
 \name{createDockerConf}
 \alias{createDockerConf}
-\title{Creates default docker conf file
-Function creates default docker user configuration file based on provided \code{setup_file}
-or on default parameters if \code{setup_file} doesn't exist. If \code{user_conf_file} exists function does nothing.}
+\title{Creates default Docker conf file
+Copies the package user.conf template to \code{user_conf_file} when the
+file is absent. When it already exists, any keys present in the template
+but missing from the existing file are added (e.g. \code{internal_ports}
+on an upgrade from a pre-multiport installation).}
 \usage{
-createDockerConf(
-  setup_file = confFile("setup.yml"),
-  user_conf_file = confFile("user.conf")
-)
+createDockerConf(user_conf_file = confFile("user.conf"))
 }
 \arguments{
-\item{setup_file}{name of config from \code{file}. If unset or not existed, "default".}
-
-\item{user_conf_file}{Location of the setup.yml file with setup parameters. If not existed use file from package}
+\item{user_conf_file}{Location of the user conf file to write.}
 }
 \description{
-Creates default docker conf file
-Function creates default docker user configuration file based on provided \code{setup_file}
-or on default parameters if \code{setup_file} doesn't exist. If \code{user_conf_file} exists function does nothing.
+Creates default Docker conf file
+Copies the package user.conf template to \code{user_conf_file} when the
+file is absent. When it already exists, any keys present in the template
+but missing from the existing file are added (e.g. \code{internal_ports}
+on an upgrade from a pre-multiport installation).
 }
 \keyword{internal}

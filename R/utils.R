@@ -539,8 +539,11 @@ getCountsMetaPart <- function(counts_dir, collection_name, verbose){
 isCountsMetaOld <- function( counts_dir = getPhantasusConf("cache_folders")$rnaseq_counts){
     meta_name <- file.path(counts_dir, "meta.rda")
     h5_files <- list.files(file.path(counts_dir), "\\.h5$", full.names = TRUE, recursive = TRUE)
+    if (!file.exists(meta_name) && length(h5_files) == 0) {
+        return(FALSE)
+    }
     meta_time <- as.numeric(file.mtime(meta_name))
-    h5_mtime <- max(unlist(lapply(h5_files, file.mtime)))
+    h5_mtime <- if (length(h5_files) > 0) max(unlist(lapply(h5_files, file.mtime))) else -Inf
     list_dirs <-  list.dirs(counts_dir, full.names = FALSE, recursive = TRUE)
     dirs_mtime <- lapply(file.path(counts_dir, list_dirs[-1]), file.mtime)
     if (length(dirs_mtime) > 0) {
@@ -549,9 +552,6 @@ isCountsMetaOld <- function( counts_dir = getPhantasusConf("cache_folders")$rnas
         dir_mtime <- -Inf
     }
     if (file.exists(meta_name) && meta_time > h5_mtime && meta_time > dir_mtime) {
-        return(FALSE)
-    }
-    if (!file.exists(meta_name) && length(h5_files) == 0){
         return(FALSE)
     }
     return(TRUE)
