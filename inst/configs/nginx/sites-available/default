@@ -73,6 +73,7 @@ server {
         location ~ /phantasus/ocpu/library/phantasus/R/generatePreloadedSession/{
             return 403;
         }
+        access_log /var/log/nginx/upstream.log upstream_timing;
         gzip on;
         gzip_types *;
         gzip_vary on;
@@ -84,7 +85,7 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
-        proxy_pass http://localhost:8001/phantasus/ocpu;
+        proxy_pass http://phantasus_backend/phantasus/ocpu;
         proxy_redirect off;
 
         client_max_body_size 0;

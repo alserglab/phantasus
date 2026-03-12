@@ -7,7 +7,7 @@ variables:
   DOCKER_TLS_CERTDIR: "/certs"
 
 
-stages: [test, build, push]
+stages: [test, build, integration, push]
 
 r-tests:
   stage: test
@@ -32,14 +32,17 @@ js-tests:
   script:
     - R -q -e 'devtools::install_dev_deps()'
 
-    - add-apt-repository -y ppa:mozillateam/ppa
+    # Install real Firefox from Mozilla's official apt repo (the Ubuntu
+    # noble package is a snap stub and cannot run headless in containers)
     - |
-      cat <<'EOF' >/etc/apt/preferences.d/mozillateam-firefox
-      Package: firefox
-      Pin: release o=LP-PPA-mozillateam
-      Pin-Priority: 1001
-      EOF
-    - apt-get update && apt-get install -y --no-install-recommends nodejs npm firefox
+      apt-get update -qq && apt-get install -y --no-install-recommends wget gpg
+      wget -q https://packages.mozilla.org/apt/repo-signing-key.gpg -O- \
+          | gpg --dearmor > /etc/apt/trusted.gpg.d/packages.mozilla.org.gpg
+      echo "deb [signed-by=/etc/apt/trusted.gpg.d/packages.mozilla.org.gpg] https://packages.mozilla.org/apt mozilla main" \
+          > /etc/apt/sources.list.d/mozilla.list
+      printf 'Package: *\nPin: origin packages.mozilla.org\nPin-Priority: 1000\n\n' \
+          > /etc/apt/preferences.d/mozilla
+      apt-get update -qq && apt-get install -y --no-install-recommends nodejs npm firefox
     - ./inst/test_js.sh
   rules:
     - if: '$CI_COMMIT_BRANCH'   # run on all branches
@@ -65,10 +68,38 @@ docker-build:
     - if: '$CI_COMMIT_BRANCH'  # all branches
   interruptible: true
 
+integration-test:
+  stage: integration
+  needs: ["docker-build"]
+  script:
+    - IMAGE_TAG="$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA"
+    - docker login -u gitlab-ci-token -p "$CI_JOB_TOKEN" "$CI_REGISTRY"
+    - docker pull "$CI_REGISTRY_IMAGE:${IMAGE_TAG}"
+    - docker run -d --name phantasus-ci "$CI_REGISTRY_IMAGE:${IMAGE_TAG}"
+    - |
+      docker exec phantasus-ci Rscript --vanilla -e '
+        deadline <- Sys.time() + 240
+        url <- "http://localhost:8000/phantasus/ocpu/library/phantasus/R/"
+        repeat {
+          code <- tryCatch(
+            httr::status_code(httr::GET(url, httr::timeout(5))),
+            error = function(e) 0L
+          )
+          if (code == 200L) { message("Ready"); break }
+          if (Sys.time() > deadline) stop("Not ready after 120s")
+          Sys.sleep(5)
+        }'
+  after_script:
+    - docker stop phantasus-ci || true
+    - docker rm   phantasus-ci || true
+  rules:
+    - if: '$CI_COMMIT_BRANCH'
+  interruptible: true
+
 # Push stable tags for releases & the default branch
 docker-push-tags:
   stage: push
-  needs: ["docker-build", "r-tests", "js-tests"]
+  needs: ["docker-build", "r-tests", "js-tests", "integration-test"]
   script:
     - docker login -u gitlab-ci-token -p "$CI_JOB_TOKEN" "$CI_REGISTRY"
     - IMAGE_TAG="$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA"

@@ -341,20 +341,32 @@ user_conf_to_yaml = function(user_config){
     ) )
 }
 
-#' Creates default docker conf file
-#' Function creates default docker user configuration file based on provided \code{setup_file}
-#' or on default parameters if \code{setup_file} doesn't exist. If \code{user_conf_file} exists function does nothing.
-#' @param setup_file  name of config from \code{file}. If unset or not existed, "default".
-#' @param user_conf_file Location of the setup.yml file with setup parameters. If not existed use file from package
+#' Creates default Docker conf file
+#' Copies the package user.conf template to \code{user_conf_file} when the
+#' file is absent. When it already exists, any keys present in the template
+#' but missing from the existing file are added (e.g. \code{internal_ports}
+#' on an upgrade from a pre-multiport installation).
+#' @param user_conf_file Location of the user conf file to write.
 #' @keywords internal
-createDockerConf <- function( setup_file = confFile("setup.yml"), user_conf_file = confFile("user.conf")){
-    if (!file.exists(user_conf_file)){
-        setup_conf <-  getSetupConf(setup_file, "default")
-        user_conf <- get_user_conf(cache_root = "/var/phantasus/cache", setup_config = setup_conf)
-        user_conf$preloaded_dir <- "/var/phantasus/preloaded"
-        dir.create(dirname(user_conf_file), showWarnings = FALSE, recursive = TRUE)
-        message(paste("Create user configuration file:", user_conf_file))
-        cat(user_conf_to_yaml(user_conf), file = user_conf_file)
+createDockerConf <- function(user_conf_file = confFile("user.conf")) {
+    template <- system.file("configs/R/phantasus/user.conf",
+                            package = "phantasus")
+    if (!file.exists(user_conf_file)) {
+        dir.create(dirname(user_conf_file), showWarnings = FALSE,
+                   recursive = TRUE)
+        file.copy(template, user_conf_file)
+        message(paste("Created user configuration file:", user_conf_file))
+    } else {
+        template_conf <- config::get(config = "default", file = template,
+                                     use_parent = FALSE)
+        user_conf <- getPhantasusConf(file = user_conf_file)
+        missing_keys <- setdiff(names(template_conf), names(user_conf))
+        if (length(missing_keys) > 0) {
+            user_conf[missing_keys] <- template_conf[missing_keys]
+            cat(user_conf_to_yaml(user_conf), file = user_conf_file)
+            message(paste("Updated user configuration file:", user_conf_file,
+                          "- added:", paste(missing_keys, collapse = ", ")))
+        }
     }
 }
 
