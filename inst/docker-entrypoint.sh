@@ -31,7 +31,10 @@ chown $OCPU_USER /run/nginx.pid
 # Let's not change user files ownership?
 # chown -R $OCPU_USER $R_USER_CONFIG_DIR/R/phantasus
 
-gosu $OCPU_USER R -e "phantasus:::createDockerConf(); phantasus::setupPhantasus()" #|| _term_config
+# editing config under root
+R -e "phantasus:::createDockerConf()"
+# then setup under ocpu user
+gosu $OCPU_USER R -e "phantasus::setupPhantasus()" #|| _term_config
 
 # Generate nginx upstream block from internal_ports in user config.
 # Falls back to ports 8001-8010 if the key is absent.
