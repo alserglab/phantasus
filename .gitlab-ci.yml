@@ -11,14 +11,10 @@ stages: [test, build, integration, push]
 
 r-tests:
   stage: test
-  image: registry.gitlab.com/alserglab/pr/phantasus/phantasus-preimage:latest
+  image: registry.gitlab.com/alserglab/pr/phantasus/phantasus-preimage:test
   services: []        # no DinD needed here
   script:
-    # (optional) install rcmdcheck/devtools if they’re not already in the image
-    - R -q -e 'if (!requireNamespace("rcmdcheck", quietly=TRUE)) install.packages("rcmdcheck", repos="https://cloud.r-project.org")'
-
-    - R -q -e 'devtools::install_dev_deps()'
-
+    - R -q -e 'remotes::install_deps(".", dependencies = TRUE, upgrade = "never")'
     # Build + check the package from the repo GitLab just checked out
     - R -q -e 'rcmdcheck::rcmdcheck(path = ".", args = c("--no-manual"), error_on = "warning")'
   rules:
@@ -27,22 +23,10 @@ r-tests:
 
 js-tests:
   stage: test
-  image: registry.gitlab.com/alserglab/pr/phantasus/phantasus-preimage:latest
+  image: registry.gitlab.com/alserglab/pr/phantasus/phantasus-preimage:test
   services: []        # no DinD needed here
   script:
-    - R -q -e 'devtools::install_dev_deps()'
-
-    # Install real Firefox from Mozilla's official apt repo (the Ubuntu
-    # noble package is a snap stub and cannot run headless in containers)
-    - |
-      apt-get update -qq && apt-get install -y --no-install-recommends wget gpg
-      wget -q https://packages.mozilla.org/apt/repo-signing-key.gpg -O- \
-          | gpg --dearmor > /etc/apt/trusted.gpg.d/packages.mozilla.org.gpg
-      echo "deb [signed-by=/etc/apt/trusted.gpg.d/packages.mozilla.org.gpg] https://packages.mozilla.org/apt mozilla main" \
-          > /etc/apt/sources.list.d/mozilla.list
-      printf 'Package: *\nPin: origin packages.mozilla.org\nPin-Priority: 1000\n\n' \
-          > /etc/apt/preferences.d/mozilla
-      apt-get update -qq && apt-get install -y --no-install-recommends nodejs npm firefox
+    - R -q -e 'remotes::install_deps(".", dependencies = TRUE, upgrade = "never")'
     - ./inst/test_js.sh
   rules:
     - if: '$CI_COMMIT_BRANCH'   # run on all branches
@@ -89,6 +73,7 @@ integration-test:
           if (Sys.time() > deadline) stop("Not ready after 120s")
           Sys.sleep(5)
         }'
+    - docker exec phantasus-ci bash /root/phantasus/inst/test-serve-managed.sh
   after_script:
     - docker stop phantasus-ci || true
     - docker rm   phantasus-ci || true

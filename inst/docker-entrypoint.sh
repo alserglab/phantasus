@@ -59,12 +59,7 @@ UPSTREAM_PORTS=$(gosu $OCPU_USER Rscript --vanilla -e "
 
 gosu $OCPU_USER nginx
 
-gosu $OCPU_USER Rscript -e "
-  ports <- unlist(phantasus::getPhantasusConf('internal_ports'))
-  message('Starting ', length(ports), ' R server instances on ports ',
-          paste(ports, collapse=', '))
-  phantasus::servePhantasus(port = ports, openInBrowser = FALSE)
-" &
+gosu $OCPU_USER Rscript /var/phantasus/serve-managed.R &
 RSCRIPT_PID=$!
 
 

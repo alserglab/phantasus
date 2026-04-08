@@ -5,8 +5,7 @@
 #'
 #' @param host Host to listen.
 #'
-#' @param port Port or integer vector of ports to listen on. A vector
-#'     of ports is unix-only and starts one server instance per port.
+#' @param port Single integer port to listen on.
 #'
 #' @param staticRoot Path to static files with phantasus.js
 #'     (on local file system).
@@ -14,35 +13,29 @@
 #' @param preloadedDir Full path to directory with preloaded files.
 #'
 #' @param openInBrowser Boolean value which states if application will
-#'     be automatically loaded in default browser. Not supported when
-#'     multiple ports are specified.
+#'     be automatically loaded in default browser.
 #'
 #' @param quiet Boolean value which states whether the connection log
 #'     should be hidden (default: TRUE)
 #'
 #' @param background Boolean value which states whether the server
-#'     should be started in background (default: FALSE). Only supported
-#'     for single-port mode; returns an httpuv server handle.
+#'     should be started in background (default: FALSE). Returns an
+#'     httpuv server handle when \code{TRUE}.
 #'
 #' @return In \code{background=TRUE} mode, the httpuv server handle.
-#'     In multi-port mode, does not return (blocks until all child
-#'     instances exit). In single-port blocking mode, does not return.
+#'     Otherwise does not return (blocks until interrupted).
 #'
 #' @import opencpu
 #' @import httpuv
-#' @import Rook
 #' @importFrom utils getFromNamespace
 #' @importFrom parallel makeCluster stopCluster
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' # Single-port, returns handle
+#' # Returns handle immediately
 #' s <- servePhantasus(background=TRUE)
 #' s$stop()
-#'
-#' # Multi-port blocking (unix only); send SIGINT to the process to stop
-#' servePhantasus(port=8001:8004)
 #' }
 #'
 #' httpuv::stopAllServers() # can be used if handle is lost
@@ -54,29 +47,6 @@ servePhantasus <- function(host = getPhantasusConf("host"),
                            quiet = TRUE,
                            background = FALSE) {
 
-    if (opencpu:::win_or_mac() && length(port) > 1) {
-        stop("Multiport configuration is unix-only")
-    }
-    if (length(port) > 1 && background) {
-        stop("background=TRUE is not supported for multiple ports")
-    }
-    if (nchar(staticRoot) == 0){
-        staticRoot = system.file("www/phantasus.js", package = "phantasus")
-    }
-    cacheDir <- normalizePath(getPhantasusConf("cache_root"))
-    preloadedDir <- if (is.null(preloadedDir)){
-        NULL
-    } else{
-        normalizePath(preloadedDir)
-    }
-
-    if (!dir.exists(cacheDir) | !areCacheFoldersValid(getPhantasusConf("cache_folders")) ){
-        stopPhantasus()
-    }
-    options(phantasusCacheDir = cacheDir,
-            phantasusPreloadedDir = preloadedDir)
-
-    selfCheck()
     if (!opencpu:::win_or_mac()) {
         if (! "unix" %in% utils::installed.packages()) {
             if (interactive() && menu(c("Yes", "No"),
@@ -163,80 +133,104 @@ servePhantasus <- function(host = getPhantasusConf("host"),
         on.exit(kill_workers(structure(pool, class = c("SOCKcluster", "cluster"))), add = TRUE)
     }
 
+    app <- buildPhantasusApp(staticRoot = staticRoot,
+                             preloadedDir = preloadedDir,
+                             run_worker = run_worker)
+
+    utils::capture.output(type = "output", {
+        tryCatch({
+            server <- startServer(host, port, app = app)
+            message(sprintf(
+                "Server was started with following parameters: host=%s, port=%s",
+                host,
+                port))
+        },
+        error = function(e) {
+            stop(paste(e,
+                       "The reason may be that requested port", port,
+                       "is occupied with some other application"))
+        })
+
+        if (openInBrowser) {
+            url <- sprintf("http://%s:%s", host, port)
+            utils::browseURL(url)
+            message(paste(url, "have been opened in your default browser.\n",
+                          "If nothing happened, check your 'browser'",
+                          "option with getOption('browser')",
+                          "or open the address manually."))
+        }
+
+        if (background) {
+            return(server)
+        }
+
+        on.exit(stopServer(server))
+        service(0)
+    }, split=!quiet)
+}
+
+buildPhantasusApp <- function(staticRoot = getPhantasusConf("static_root"),
+                               preloadedDir = getPhantasusConf("preloaded_dir"),
+                               run_worker = NULL) {
+    if (nchar(staticRoot) == 0) {
+        staticRoot <- system.file("www/phantasus.js", package = "phantasus")
+    }
+    cacheDir <- normalizePath(getPhantasusConf("cache_root"))
+    preloadedDir <- if (is.null(preloadedDir)) {
+        NULL
+    } else {
+        normalizePath(preloadedDir)
+    }
+
+    if (!dir.exists(cacheDir) ||
+            !areCacheFoldersValid(getPhantasusConf("cache_folders"))) {
+        stopPhantasus()
+    }
+    options(phantasusCacheDir = cacheDir,
+            phantasusPreloadedDir = preloadedDir)
+
+    selfCheck()
 
     releaseJSfile <- file.path(tempdir(), "RELEASE.js")
     generateReleaseJS(releaseJSfile)
 
-    subPathStatic <- function (targetDirectory, subPath) {
-        static <- Rook::File$new(targetDirectory)
+    ocpu_handler <- opencpu:::rookhandler("/phantasus/ocpu",
+                                          worker_cb = run_worker)
 
-        function (env) {
-            env$PATH_INFO <- unlist(strsplit(env$PATH_INFO, subPath, fixed=TRUE))[2]
-            static$call(env)
-        }
-    }
-
-    app <- Rook::URLMap$new(`/phantasus/ocpu` = opencpu:::rookhandler("/phantasus/ocpu", worker_cb=run_worker),
-                            `/phantasus/geo` = subPathStatic(getPhantasusConf("cache_folders")$geo_path, '/phantasus/geo'),
-                            `/phantasus/preloaded` = subPathStatic(cacheDir, '/phantasus/'),
-                            `/phantasus/RELEASE.js` = subPathStatic(tempdir(), '/phantasus/'),
-                            `/phantasus/?` = subPathStatic(staticRoot, '/phantasus/'),
-                            `/?` = Rook::Redirect("/phantasus/index.html"))
-
-    if (length(port) == 1) {
-        utils::capture.output(type = "output", {
-            tryCatch({
-                server <- startServer(host, port, app = app)
-                message(sprintf(
-                    "Server was started with following parameters: host=%s, port=%s",
-                    host,
-                    port))
-            },
-            error = function(e) {
-                stop(paste(e,
-                           "The reason may be that requested port", port,
-                           "is occupied with some other application"))
-            })
-
-            if (openInBrowser) {
-                url <- sprintf("http://%s:%s", host, port)
-                utils::browseURL(url)
-                message(paste(url, "have been opened in your default browser.\n",
-                              "If nothing happened, check your 'browser'",
-                              "option with getOption('browser')",
-                              "or open the address manually."))
+    app <- list(
+        call = function(req) {
+            path <- req$PATH_INFO
+            if (startsWith(path, "/phantasus/ocpu")) {
+                ocpu_handler(req)
+            } else if (path == "/phantasus/RELEASE.js") {
+                content <- readBin(releaseJSfile, "raw",
+                                   n = file.info(releaseJSfile)$size)
+                list(status  = 200L,
+                     headers = list("Content-Type" = "application/javascript"),
+                     body    = content)
+            } else if (path == "/" || path == "") {
+                list(status  = 301L,
+                     headers = list(Location = "/phantasus/index.html"),
+                     body    = "")
+            } else {
+                list(status = 404L, headers = list(), body = "Not found\n")
             }
-
-            if (background) {
-                return(server)
-            }
-
-            on.exit(stopServer(server))
-            service(0)
-        }, split=!quiet)
-    } else {
-        # unix only, blocking
-        if (openInBrowser) {
-            stop("Can't open in browser with multiple instances")
-        }
-        gc() # clean up unneeded stuff before forking
-        parallel::mclapply(port,  function(p) {
-            utils::capture.output(type = "output", {
-                tryCatch({
-                    server <- startServer(host, p, app = app)
-                    message(sprintf(
-                        "Server was started with following parameters: host=%s, port=%s",
-                        host,
-                        p))
-                    on.exit(stopServer(server))
-                    service(0)
-                },
-                error = function(e) {
-                    stop(paste(e,
-                               "The reason may be that requested port", p,
-                               "is occupied with some other application"))
-                })
-            }, split=!quiet)
-        }, mc.cores=length(port))
-    }
+        },
+        staticPaths = list(
+            "/phantasus/ocpu"      = httpuv::excludeStaticPath(),
+            "/phantasus/geo"       = httpuv::staticPath(
+                                         getPhantasusConf("cache_folders")$geo_path,
+                                         fallthrough = FALSE,
+                                         indexhtml   = FALSE),
+            "/phantasus/preloaded" = httpuv::staticPath(
+                                         cacheDir,
+                                         fallthrough = FALSE,
+                                         indexhtml   = FALSE),
+            "/phantasus"           = httpuv::staticPath(
+                                         staticRoot,
+                                         fallthrough = TRUE,
+                                         indexhtml   = TRUE)
+        )
+    )
+    app
 }

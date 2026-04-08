@@ -21,7 +21,7 @@ Depends: R (>= 4.3)
 biocViews: GeneExpression, GUI, Visualization, DataRepresentation, Transcriptomics,
             RNASeq, Microarray, Normalization, Clustering, DifferentialExpression,
             PrincipalComponent, ImmunoOncology
-Imports: ggplot2, protolite, Biobase, GEOquery, Rook, htmltools,
+Imports: ggplot2, protolite, Biobase, GEOquery, htmltools,
         httpuv, jsonlite, limma, edgeR, opencpu, assertthat, methods, httr, rhdf5,
         utils, parallel, stringr, fgsea (>= 1.9.4), svglite, gtable, stats,
         Matrix, pheatmap, scales, ccaPP, grid, grDevices,
