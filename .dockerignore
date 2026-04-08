@@ -8,5 +8,6 @@ data/
 inst/extdata/
 inst/testdata/
 inst/*.R
+!inst/serve-managed.R
 inst/www/phantasus.js/jasmine/
 .git/

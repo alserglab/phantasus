@@ -17,8 +17,7 @@ servePhantasus(
 \arguments{
 \item{host}{Host to listen.}
 
-\item{port}{Port or integer vector of ports to listen on. A vector
-of ports is unix-only and starts one server instance per port.}
+\item{port}{Single integer port to listen on.}
 
 \item{staticRoot}{Path to static files with phantasus.js
 (on local file system).}
@@ -26,20 +25,18 @@ of ports is unix-only and starts one server instance per port.}
 \item{preloadedDir}{Full path to directory with preloaded files.}
 
 \item{openInBrowser}{Boolean value which states if application will
-be automatically loaded in default browser. Not supported when
-multiple ports are specified.}
+be automatically loaded in default browser.}
 
 \item{quiet}{Boolean value which states whether the connection log
 should be hidden (default: TRUE)}
 
 \item{background}{Boolean value which states whether the server
-should be started in background (default: FALSE). Only supported
-for single-port mode; returns an httpuv server handle.}
+should be started in background (default: FALSE). Returns an
+httpuv server handle when \code{TRUE}.}
 }
 \value{
 In \code{background=TRUE} mode, the httpuv server handle.
-    In multi-port mode, does not return (blocks until all child
-    instances exit). In single-port blocking mode, does not return.
+    Otherwise does not return (blocks until interrupted).
 }
 \description{
 \code{servePhantasus} starts http server handling phantasus static
@@ -47,12 +44,9 @@ files and opencpu server.
 }
 \examples{
 \dontrun{
-# Single-port, returns handle
+# Returns handle immediately
 s <- servePhantasus(background=TRUE)
 s$stop()
-
-# Multi-port blocking (unix only); send SIGINT to the process to stop
-servePhantasus(port=8001:8004)
 }
 
 httpuv::stopAllServers() # can be used if handle is lost

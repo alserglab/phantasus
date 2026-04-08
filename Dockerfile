@@ -6,13 +6,6 @@ ARG GITHUB_PAT
 ENV OCPU_MASTER_HOME=/var/phantasus/ocpu-root
 ENV R_USER_CONFIG_DIR=/etc
 
-# RUN apt install -y git && git clone -b ${TARGET_BRANCH} --recursive https://github.com/ctlab/phantasus /root/phantasus
-
-# RUN R -e 'BiocManager::install(c("rhdf5client", "phantasusLite"))'
-
-# install the most recent rhdf5client to support ARCHS4 v2.3 count files
-# RUN R -e 'BiocManager::install(c("vjcitn/rhdf5client", "ctlab/phantasusLite"))'
-
 COPY . /root/phantasus
 
 RUN ls -l /root/phantasus
@@ -47,6 +40,9 @@ ENV OCPU_USER=www-data
 RUN mkdir -p ${R_USER_CONFIG_DIR}/R && cp -r /root/phantasus/inst/configs/R/phantasus ${R_USER_CONFIG_DIR}/R/ &&\
 chown -R ${OCPU_USER} ${R_USER_CONFIG_DIR}/R/phantasus
 
+RUN cp /root/phantasus/inst/serve-managed.R /var/phantasus/serve-managed.R && \
+    chown ${OCPU_USER} /var/phantasus/serve-managed.R
+
 RUN mkdir -p /var/phantasus/cache && chown ${OCPU_USER} /var/phantasus/cache
 RUN mkdir -p /var/phantasus/preloaded && chown ${OCPU_USER} /var/phantasus/preloaded
 RUN mkdir -p /var/phantasus/ocpu-root && chown -R ${OCPU_USER} /var/phantasus/ocpu-root
@@ -54,8 +50,6 @@ RUN mkdir -p /var/cache/nginx && chown -R ${OCPU_USER} /var/cache/nginx
 RUN chown ${OCPU_USER} /var/phantasus
 
 RUN ls -l /root/phantasus
-
-RUN rm -rf /root/phantasus/inst
 
 # Disable bspm at runtime — only needed during image build
 RUN sed -i '/bspm/d' /etc/R/Rprofile.site
