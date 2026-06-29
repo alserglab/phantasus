@@ -1,5 +1,7 @@
 context("Limma Analysis")
 
+setwd(tempdir()) # put generated files (originally for OpenCPU to serve) to a temp dir
+
 test_that("limmaAnalysis finishes with result", {
   load(file = system.file("testdata/GSE27112-GPL6103.rda", package="phantasus"))
   expect_is(limmaAnalysis(es,

@@ -128,7 +128,7 @@ getGDS <- function(name, destdir = getPhantasusConf("cache_folders")$geo_path,
         message(paste("Loading from locally found file", destfile))
     }
 
-    l <- suppressWarnings(getGEO(GEO = name, destdir = fullGEODirPath, AnnotGPL = TRUE))
+    l <- suppressWarnings(getGEO(GEO = name, destdir = fullGEODirPath, AnnotGPL = TRUE, returnType = "ExpressionSet"))
 
     # extracting all useful information on dataset
     table <- methods::slot(l, "dataTable")
@@ -513,7 +513,7 @@ getGSE <- function(name, destdir = getPhantasusConf("cache_folders")$geo_path,
     }
 
     if (infile && file.size(destfile) > 0) {
-        ess <- list(suppressWarnings(getGEO(filename = destfile, destdir = fullGEODirPath, getGPL = FALSE, AnnotGPL = FALSE)))
+        ess <- list(suppressWarnings(getGEO(filename = destfile, destdir = fullGEODirPath, getGPL = FALSE, AnnotGPL = FALSE, returnType = "ExpressionSet")))
         for (i in seq_len(length(ess))) {
             ess[[i]] <- annotateFeatureData(ess[[i]], destdir)
         }

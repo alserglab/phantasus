@@ -427,7 +427,7 @@ Let us preprocess and save `GSE14308` dataset:
 ```{r, message=FALSE, cache=TRUE, eval=FALSE}
 library(GEOquery)
 library(limma)
-gse14308 <- getGEO("GSE14308", AnnotGPL = TRUE)[[1]]
+gse14308 <- getGEO("GSE14308", AnnotGPL = TRUE, returnType = "ExpressionSet")[[1]]
 gse14308$condition <- sub("-.*$", "", gse14308$title)
 pData(gse14308) <- pData(gse14308)[, c("title", "geo_accession", "condition")]
 gse14308 <- gse14308[, order(gse14308$condition)]

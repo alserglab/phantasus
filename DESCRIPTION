@@ -1,6 +1,6 @@
 Package: phantasus
 Title: Visual and interactive gene expression analysis
-Version: 1.33.0
+Version: 1.33.1
 Authors@R: c(
     person("Maxim", "Kleverov", role = "aut"),        
     person("Daria", "Zenkova", role = "aut"),
@@ -21,7 +21,8 @@ Depends: R (>= 4.3)
 biocViews: GeneExpression, GUI, Visualization, DataRepresentation, Transcriptomics,
             RNASeq, Microarray, Normalization, Clustering, DifferentialExpression,
             PrincipalComponent, ImmunoOncology
-Imports: ggplot2, protolite, Biobase, GEOquery, htmltools,
+Imports: ggplot2, protolite, Biobase, GEOquery (>= 2.81.21),
+        htmltools,
         httpuv, jsonlite, limma, edgeR, opencpu, assertthat, methods, httr, rhdf5,
         utils, parallel, stringr, fgsea (>= 1.9.4), svglite, gtable, stats,
         Matrix, pheatmap, scales, ccaPP, grid, grDevices,
